@@ -6,11 +6,10 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "start": "node dist/server/entry.mjs",
+    "start": "astro preview",
     "test": "vitest"
   },
   "dependencies": {
-    "@astrojs/node": "^10.1.1",
     "@astrojs/vercel": "^10.0.7",
     "astro": "^6.3.5"
   },
