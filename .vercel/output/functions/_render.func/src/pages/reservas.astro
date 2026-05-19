@@ -1,0 +1,182 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const today = new Date().toISOString().split('T')[0];
+const maxDate = new Date();
+maxDate.setDate(maxDate.getDate() + 30);
+const maxDateStr = maxDate.toISOString().split('T')[0];
+
+const lunchSlots = ['12:00','12:30','13:00','13:30','14:00','14:30'];
+const dinnerSlots = ['19:00','19:30','20:00','20:30','21:00','21:30'];
+---
+
+<Layout title="Reservar mesa" activePage="reservas">
+  <div class="page-header">
+    <div class="container">
+      <h1>Reservar Mesa</h1>
+      <p>Garantiza tu lugar sin necesidad de llamarnos</p>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <!-- Formulario -->
+    <div class="form-card" id="form-card">
+      <form id="reservation-form" novalidate>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="date">Fecha *</label>
+            <input type="date" id="date" name="date" min={today} max={maxDateStr} required />
+          </div>
+          <div class="form-group">
+            <label for="time">Hora *</label>
+            <select id="time" name="time" required>
+              <option value="">Selecciona un horario</option>
+              <optgroup label="Almuerzo">
+                {lunchSlots.map(t => <option value={t}>{t}</option>)}
+              </optgroup>
+              <optgroup label="Cena">
+                {dinnerSlots.map(t => <option value={t}>{t}</option>)}
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="guests">Número de comensales *</label>
+          <select id="guests" name="guests" required>
+            <option value="">Selecciona</option>
+            {[1,2,3,4,5,6,7,8,9,10].map(n => (
+              <option value={String(n)}>{n} {n === 1 ? 'persona' : 'personas'}</option>
+            ))}
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="customerName">Nombre completo *</label>
+          <input type="text" id="customerName" name="customerName"
+            placeholder="Ej. María García" required autocomplete="name" />
+        </div>
+
+        <div class="form-group">
+          <label for="customerEmail">Correo electrónico *</label>
+          <input type="email" id="customerEmail" name="customerEmail"
+            placeholder="correo@ejemplo.com" required autocomplete="email" />
+        </div>
+
+        <div id="alert-zone"></div>
+
+        <div class="alternatives hidden" id="alt-zone">
+          <h4>Horarios disponibles cercanos:</h4>
+          <div id="alt-buttons"></div>
+        </div>
+
+        <button type="submit" class="btn-primary btn-full" id="btn-reserve">
+          Verificar disponibilidad y reservar
+        </button>
+      </form>
+    </div>
+
+    <!-- Confirmación -->
+    <div class="form-card confirmation-card hidden" id="conf-card" role="region" aria-live="polite">
+      <div class="confirmation-icon" aria-hidden="true">🎉</div>
+      <h2>¡Reserva confirmada!</h2>
+      <div class="confirmation-code" id="conf-code"></div>
+      <p class="confirmation-detail" id="conf-details"></p>
+      <p class="confirmation-detail" style="margin-top:.625rem">
+        Te esperamos puntual para que disfrutes la experiencia completa.
+      </p>
+      <a href="/" class="btn-primary" style="margin-top:1.5rem;display:inline-flex">
+        Ver menú
+      </a>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const form = document.getElementById('reservation-form') as HTMLFormElement;
+  const alertZone = document.getElementById('alert-zone')!;
+  const altZone = document.getElementById('alt-zone')!;
+  const altButtons = document.getElementById('alt-buttons')!;
+
+  function showAlert(msg: string, type: 'error' | 'warning') {
+    alertZone.innerHTML = `<div class="alert alert-${type}" role="alert">${msg}</div>`;
+  }
+
+  function showAlternatives(alts: { date: string; time: string }[]) {
+    if (!alts?.length) { altZone.classList.add('hidden'); return; }
+    altZone.classList.remove('hidden');
+    altButtons.innerHTML = alts.map(a =>
+      `<button type="button" class="alt-btn" data-date="${a.date}" data-time="${a.time}">🕐 ${a.time}</button>`
+    ).join('');
+    altButtons.querySelectorAll<HTMLButtonElement>('.alt-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        (document.getElementById('time') as HTMLSelectElement).value = btn.dataset.time!;
+        altZone.classList.add('hidden');
+        alertZone.innerHTML = '';
+      });
+    });
+  }
+
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    alertZone.innerHTML = '';
+    altZone.classList.add('hidden');
+
+    const fd = new FormData(form);
+    const date = fd.get('date') as string;
+    const time = fd.get('time') as string;
+    const guests = fd.get('guests') as string;
+    const customerName = (fd.get('customerName') as string).trim();
+    const customerEmail = (fd.get('customerEmail') as string).trim();
+
+    if (!date || !time || !guests || !customerName || !customerEmail) {
+      showAlert('Por favor completa todos los campos requeridos.', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('btn-reserve') as HTMLButtonElement;
+    btn.disabled = true;
+    btn.classList.add('btn-loading');
+
+    try {
+      // 1. Verificar disponibilidad
+      const availRes = await fetch(`/api/reservations/availability?date=${date}&time=${time}`);
+      const availData = await availRes.json();
+
+      if (!availData.available) {
+        showAlert('No hay disponibilidad en el horario seleccionado.', 'warning');
+        showAlternatives(availData.alternatives);
+        return;
+      }
+
+      // 2. Crear reserva
+      const res = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, time, guests: Number(guests), customerName, customerEmail })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        showAlert(data.error ?? 'Error al crear la reserva', 'error');
+        return;
+      }
+
+      // Mostrar confirmación
+      document.getElementById('form-card')!.classList.add('hidden');
+      document.getElementById('conf-code')!.textContent = data.confirmationCode;
+
+      const dateLabel = new Date(date + 'T12:00').toLocaleDateString('es-CO', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+      document.getElementById('conf-details')!.textContent =
+        `${dateLabel} · ${time} · ${guests} ${Number(guests) === 1 ? 'persona' : 'personas'}`;
+      document.getElementById('conf-card')!.classList.remove('hidden');
+    } catch {
+      showAlert('Error de conexión. Por favor inténtalo de nuevo.', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.classList.remove('btn-loading');
+    }
+  });
+</script>
