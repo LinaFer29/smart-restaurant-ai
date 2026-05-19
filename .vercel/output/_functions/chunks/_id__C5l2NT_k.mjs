@@ -1,4 +1,4 @@
-import { d as db } from './database_3TQ1Q7XS.mjs';
+import { d as db } from './database_-EysS8Jg.mjs';
 
 const GET = ({ params }) => {
   const row = db.prepare("SELECT * FROM orders WHERE id = ?").get(Number(params.id));

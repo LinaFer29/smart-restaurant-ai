@@ -2,9 +2,30 @@
 import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
 
-const db = new DatabaseSync(join(process.cwd(), 'restaurant.db'));
+function openDatabase() {
+  const localPath = join(process.cwd(), 'restaurant.db');
+  const candidates = process.env.VERCEL
+    ? ['/tmp/restaurant.db', localPath, ':memory:']
+    : [localPath, ':memory:'];
 
-db.exec('PRAGMA journal_mode = WAL');
+  for (const file of candidates) {
+    try {
+      const instance = new DatabaseSync(file);
+      try {
+        instance.exec('PRAGMA journal_mode = WAL');
+      } catch {
+        // Ignorar si el modo WAL no está disponible en el entorno.
+      }
+      return instance;
+    } catch {
+      // Probar siguiente candidato.
+    }
+  }
+
+  throw new Error('No fue posible inicializar la base de datos SQLite');
+}
+
+const db = openDatabase();
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS menu_items (

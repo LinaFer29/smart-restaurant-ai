@@ -1,7 +1,7 @@
-import { c as createComponent } from './astro-component_DVbGZrws.mjs';
+import { c as createComponent } from './astro-component_BDB7a7Z-.mjs';
 import 'piccolore';
-import { n as renderComponent, r as renderTemplate, m as maybeRenderHead, h as addAttribute } from './entrypoint_Bx1_gYkZ.mjs';
-import { $ as $$Layout, r as renderScript } from './Layout_DbkC2v3H.mjs';
+import { n as renderComponent, r as renderTemplate, m as maybeRenderHead, h as addAttribute } from './entrypoint_B8nwgSkQ.mjs';
+import { $ as $$Layout, r as renderScript } from './Layout_UY2xY6g3.mjs';
 
 const $$Reservas = createComponent(async ($$result, $$props, $$slots) => {
   const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];

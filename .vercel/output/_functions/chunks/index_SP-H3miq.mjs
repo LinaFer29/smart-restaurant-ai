@@ -1,8 +1,8 @@
-import { c as createComponent } from './astro-component_DVbGZrws.mjs';
+import { c as createComponent } from './astro-component_BDB7a7Z-.mjs';
 import 'piccolore';
-import { n as renderComponent, r as renderTemplate, m as maybeRenderHead, h as addAttribute } from './entrypoint_Bx1_gYkZ.mjs';
-import { $ as $$Layout, r as renderScript } from './Layout_DbkC2v3H.mjs';
-import { d as db } from './database_3TQ1Q7XS.mjs';
+import { n as renderComponent, r as renderTemplate, m as maybeRenderHead, h as addAttribute } from './entrypoint_B8nwgSkQ.mjs';
+import { $ as $$Layout, r as renderScript } from './Layout_UY2xY6g3.mjs';
+import { d as db } from './database_-EysS8Jg.mjs';
 
 const $$Index = createComponent(async ($$result, $$props, $$slots) => {
   const menuItems = db.prepare("SELECT * FROM menu_items ORDER BY category, name").all();
