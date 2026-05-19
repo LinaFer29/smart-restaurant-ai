@@ -6,13 +6,17 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "start": "node dist/server/entry.mjs"
+    "start": "node dist/server/entry.mjs",
+    "test": "vitest"
   },
   "dependencies": {
-    "astro": "^4.16.0",
-    "@astrojs/node": "^8.3.0"
+    "@astrojs/node": "^10.1.1",
+    "astro": "^6.3.5"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0"
+    "@testing-library/dom": "^10.4.1",
+    "@types/node": "^22.0.0",
+    "jsdom": "^27.0.1",
+    "vitest": "^3.2.4"
   }
 }
