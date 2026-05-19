@@ -168,6 +168,52 @@ nav { display: flex; gap: .375rem; flex-shrink: 0; }
 .cart-total { display: flex; justify-content: space-between; font-weight: 700; margin-bottom: .875rem; }
 .cart-total-amount { color: var(--red); font-size: 1.05rem; }
 
+/* ── Allergies block in cart ────────────────────────────── */
+.allergies-group { margin-bottom: .75rem; }
+.allergies-toggle-btn {
+  justify-content: flex-start;
+  border-color: #e5d7a7;
+  background: #fffcf1;
+  color: #7a5c00;
+  font-size: .86rem;
+}
+.allergies-toggle-btn:hover { background: #fff8df; border-color: #dcc47a; }
+.allergies-section {
+  margin-top: .6rem;
+  padding: .7rem .75rem .75rem;
+  border: 1px solid #f3dfac;
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, #fffef8 0%, #fff9eb 100%);
+}
+.allergies-label {
+  font-size: .8rem;
+  font-weight: 700;
+  color: #6b5000;
+  margin-bottom: .35rem;
+}
+.allergies-input {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  border: 1.5px solid #edd7a5;
+  background: #fff;
+  border-radius: var(--r-sm);
+  padding: .62rem .78rem;
+  font-size: .86rem;
+  line-height: 1.38;
+}
+.allergies-input:focus {
+  outline: none;
+  border-color: #c9a227;
+  box-shadow: 0 0 0 3px rgba(201, 162, 39, .18);
+}
+.allergies-help {
+  display: block;
+  margin-top: .34rem;
+  color: #856404;
+  font-size: .74rem;
+}
+
 /* ── Mobile sticky bar ───────────────────────────────────── */
 .cart-mobile-bar {
   display: none;

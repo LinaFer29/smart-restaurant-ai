@@ -45,6 +45,7 @@ db.exec(`
     total REAL NOT NULL,
     status TEXT DEFAULT 'pendiente',
     customer_name TEXT DEFAULT 'Cliente',
+    allergies TEXT DEFAULT '',
     created_at TEXT NOT NULL
   );
 
@@ -70,6 +71,11 @@ db.exec(`
     FOREIGN KEY (order_id) REFERENCES orders(id)
   );
 `);
+
+const orderColumns = db.prepare("PRAGMA table_info('orders')").all() as { name: string }[];
+if (!orderColumns.some((c) => c.name === 'allergies')) {
+  db.exec("ALTER TABLE orders ADD COLUMN allergies TEXT DEFAULT ''");
+}
 
 const menuCount = (db.prepare('SELECT COUNT(*) as n FROM menu_items').get() as { n: number }).n;
 

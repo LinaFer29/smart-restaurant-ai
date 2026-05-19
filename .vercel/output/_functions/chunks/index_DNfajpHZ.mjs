@@ -1,8 +1,8 @@
-import { d as db } from './database_-EysS8Jg.mjs';
+import { d as db } from './database_DUDdWhjA.mjs';
 
 const POST = async ({ request }) => {
   try {
-    const { items, total, customerName } = await request.json();
+    const { items, total, customerName, allergies } = await request.json();
     if (!items?.length) {
       return new Response(JSON.stringify({ error: "El pedido debe tener al menos un producto" }), {
         status: 400,
@@ -20,9 +20,24 @@ const POST = async ({ request }) => {
     }
     const orderNumber = `PED-${Date.now()}`;
     const result = db.prepare(
-      "INSERT INTO orders (order_number, items, total, status, customer_name, created_at) VALUES (?, ?, ?, ?, ?, ?)"
-    ).run(orderNumber, JSON.stringify(items), total, "pendiente", customerName ?? "Cliente", (/* @__PURE__ */ new Date()).toISOString());
-    return new Response(JSON.stringify({ id: result.lastInsertRowid, orderNumber, status: "pendiente", total, items }), {
+      "INSERT INTO orders (order_number, items, total, status, customer_name, allergies, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    ).run(
+      orderNumber,
+      JSON.stringify(items),
+      total,
+      "pendiente",
+      customerName ?? "Cliente",
+      typeof allergies === "string" ? allergies.trim() : "",
+      (/* @__PURE__ */ new Date()).toISOString()
+    );
+    return new Response(JSON.stringify({
+      id: result.lastInsertRowid,
+      orderNumber,
+      status: "pendiente",
+      total,
+      items,
+      allergies: typeof allergies === "string" ? allergies.trim() : ""
+    }), {
       status: 201,
       headers: { "Content-Type": "application/json" }
     });

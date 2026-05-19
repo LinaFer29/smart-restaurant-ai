@@ -1,4 +1,4 @@
-import { d as db } from './database_-EysS8Jg.mjs';
+import { d as db } from './database_DUDdWhjA.mjs';
 
 const GET = () => {
   const items = db.prepare("SELECT * FROM menu_items ORDER BY category, name").all();

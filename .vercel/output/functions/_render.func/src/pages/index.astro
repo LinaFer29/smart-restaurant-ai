@@ -73,6 +73,21 @@ function formatCOP(n: number) {
         <p class="cart-empty">Agrega productos para comenzar tu pedido</p>
       </div>
       <div class="cart-footer hidden" id="cart-footer">
+        <div class="form-group allergies-group">
+          <button type="button" id="toggle-allergies" class="btn-secondary btn-full allergies-toggle-btn">
+            Agregar restricción alimenticia (opcional)
+          </button>
+          <div id="allergies-section" class="hidden allergies-section">
+            <label for="order-allergies" class="allergies-label">Describe tus alergias o restricciones</label>
+            <textarea
+              id="order-allergies"
+              rows="2"
+              placeholder="Ej: alergia al maní, mariscos, lactosa..."
+              class="allergies-input"
+            ></textarea>
+            <small class="allergies-help">Debes completar este campo para confirmar el pedido.</small>
+          </div>
+        </div>
         <div class="cart-total">
           <span>Total</span>
           <span class="cart-total-amount" id="cart-total">$0</span>
@@ -111,6 +126,33 @@ function formatCOP(n: number) {
   interface CartItem { id: number; name: string; price: number; qty: number; }
 
   const cart: CartItem[] = [];
+  let allergiesEnabled = false;
+  const allergiesSection = document.getElementById('allergies-section') as HTMLDivElement;
+  const allergiesInput = document.getElementById('order-allergies') as HTMLTextAreaElement;
+  const toggleAllergiesBtn = document.getElementById('toggle-allergies') as HTMLButtonElement;
+  const orderBtn = document.getElementById('btn-order') as HTMLButtonElement;
+  const orderMobileBtn = document.getElementById('btn-order-mobile') as HTMLButtonElement;
+
+  function updateOrderButtonsState() {
+    const hasItems = cart.length > 0;
+    const hasAllergiesText = allergiesInput.value.trim().length > 0;
+    const mustBlockForAllergies = allergiesEnabled && !hasAllergiesText;
+    const disabled = !hasItems || mustBlockForAllergies;
+    orderBtn.disabled = disabled;
+    orderMobileBtn.disabled = disabled;
+  }
+
+  toggleAllergiesBtn.addEventListener('click', () => {
+    allergiesEnabled = !allergiesEnabled;
+    allergiesSection.classList.toggle('hidden', !allergiesEnabled);
+    toggleAllergiesBtn.textContent = allergiesEnabled
+      ? 'Quitar restricción alimenticia'
+      : 'Agregar restricción alimenticia (opcional)';
+    if (!allergiesEnabled) allergiesInput.value = '';
+    updateOrderButtonsState();
+  });
+
+  allergiesInput.addEventListener('input', updateOrderButtonsState);
 
   /* ── Filtros de categoría ── */
   document.getElementById('cat-tabs')!.addEventListener('click', e => {
@@ -162,6 +204,7 @@ function formatCOP(n: number) {
       itemsEl.innerHTML = '<p class="cart-empty">Agrega productos para comenzar tu pedido</p>';
       footer.classList.add('hidden');
       mobileBar.classList.remove('visible');
+      updateOrderButtonsState();
       return;
     }
 
@@ -199,6 +242,7 @@ function formatCOP(n: number) {
         renderCart();
       });
     });
+    updateOrderButtonsState();
   }
 
   /* ── Enviar pedido ── */
@@ -210,10 +254,15 @@ function formatCOP(n: number) {
 
     try {
       const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+      const allergies = allergiesEnabled ? allergiesInput.value.trim() : '';
       const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cart.map(({ id, name, price, qty }) => ({ id, name, price, qty })), total })
+        body: JSON.stringify({
+          items: cart.map(({ id, name, price, qty }) => ({ id, name, price, qty })),
+          total,
+          allergies
+        })
       });
       const data = await res.json();
 
@@ -225,6 +274,10 @@ function formatCOP(n: number) {
       document.getElementById('modal-order-number')!.textContent = data.orderNumber;
       (document.getElementById('btn-pay-now') as HTMLAnchorElement).href = `/pago?orderId=${data.id}`;
       document.getElementById('modal')!.classList.add('open');
+      allergiesInput.value = '';
+      allergiesEnabled = false;
+      allergiesSection.classList.add('hidden');
+      toggleAllergiesBtn.textContent = 'Agregar restricción alimenticia (opcional)';
       cart.length = 0;
       renderCart();
     } catch {
@@ -244,4 +297,6 @@ function formatCOP(n: number) {
   document.getElementById('modal')!.addEventListener('click', e => {
     if (e.target === e.currentTarget) document.getElementById('modal')!.classList.remove('open');
   });
+
+  updateOrderButtonsState();
 </script>

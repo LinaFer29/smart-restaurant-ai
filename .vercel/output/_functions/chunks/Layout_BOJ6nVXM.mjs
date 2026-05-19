@@ -1,5 +1,5 @@
-import { o as createRenderInstruction, p as renderHead, h as addAttribute, q as renderSlot, r as renderTemplate } from './entrypoint_BZTOof7K.mjs';
-import { c as createComponent } from './astro-component_Cm4UKfQu.mjs';
+import { o as createRenderInstruction, p as renderHead, h as addAttribute, q as renderSlot, r as renderTemplate } from './entrypoint_lgj9SqG-.mjs';
+import { c as createComponent } from './astro-component_DSw7g-oM.mjs';
 import 'piccolore';
 import 'clsx';
 
