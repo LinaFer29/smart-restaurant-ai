@@ -101,14 +101,16 @@ npm run preview
 - Pago: `aprobado`
 
 ## Integrantes del equipo
-- Nombre Apellido - Rol
-- Nombre Apellido - Rol
-- Nombre Apellido - Rol
+- Lina Fernández - Project Manage
+- Luis Mosquera - Product Owner
+- Joan Tunubala - Analista Funcional
+- Juan José Pizo - QA/SDET
+- Juan José Castro - Desarrollador
 
 ## IA's empleadas
-- ChatGPT (OpenAI) - apoyo en redacción/documentación
-- Codex (OpenAI) - apoyo en asistencia de desarrollo
-- [Agregar otras herramientas de IA utilizadas por el equipo]
+- Gemini - Fase de Planeación
+- Claude - Fase de Elicitación y Diseño
+- ChatGPT (Codex) - Fase de Desarrollo y Pruebas
 
 ## Próximos pasos sugeridos
 - Integrar pasarela de pagos real (Wompi, Mercado Pago, Stripe, etc.).
