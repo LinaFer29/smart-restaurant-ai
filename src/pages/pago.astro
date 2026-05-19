@@ -1,0 +1,318 @@
+---
+import Layout from '../layouts/Layout.astro';
+import db from '../lib/database';
+
+type OrderItem = { id: number; name: string; price: number; qty: number };
+type Order = { id: number; order_number: string; items: OrderItem[]; total: number; status: string };
+
+const orderId = Astro.url.searchParams.get('orderId');
+let order: Order | null = null;
+
+if (orderId) {
+  const raw = db.prepare('SELECT * FROM orders WHERE id = ?').get(Number(orderId)) as any;
+  if (raw) order = { ...raw, items: JSON.parse(raw.items) };
+}
+
+function formatCOP(n: number) {
+  return '$' + n.toLocaleString('es-CO');
+}
+---
+
+<Layout title="Pago">
+  <div class="page-header">
+    <div class="container">
+      <h1>Pago del pedido</h1>
+      <p>Completa tu pago de forma segura</p>
+    </div>
+  </div>
+
+  {!order ? (
+    <div class="no-order container">
+      <div class="no-order-icon" aria-hidden="true">🔍</div>
+      <h2>Pedido no encontrado</h2>
+      <p>No encontramos el pedido solicitado.</p>
+      <a href="/" class="btn-primary">Volver al menú</a>
+    </div>
+  ) : order.status === 'pagado' ? (
+    <div class="no-order container">
+      <div class="no-order-icon" aria-hidden="true">✅</div>
+      <h2>Pedido ya pagado</h2>
+      <p>El pedido <strong>{order.order_number}</strong> ya tiene su pago registrado.</p>
+      <a href="/" class="btn-primary">Ver menú</a>
+    </div>
+  ) : (
+    <div class="pago-layout container">
+      <!-- Formulario de pago -->
+      <div>
+        <div class="form-card" id="payment-form-card">
+          <h3 style="font-size:1.05rem;font-weight:700;margin-bottom:1.25rem">Datos de pago</h3>
+
+          <div id="payment-alert"></div>
+
+          <form id="payment-form" novalidate>
+            <input type="hidden" id="order-id-val" value={String(order.id)} />
+            <input type="hidden" id="paymentMethod" value="card" />
+
+            <div class="form-group">
+              <label>Método de pago</label>
+              <div class="payment-methods" role="radiogroup" aria-label="Métodos de pago">
+                <button type="button" class="payment-method active" data-method="card" aria-pressed="true">
+                  <span class="payment-method-title">Tarjeta débito / crédito</span>
+                  <span class="payment-method-subtitle">Visa, Mastercard, Amex</span>
+                </button>
+                <button type="button" class="payment-method" data-method="pse" aria-pressed="false">
+                  <span class="payment-method-title">PSE</span>
+                  <span class="payment-method-subtitle">Débito bancario en línea</span>
+                </button>
+                <button type="button" class="payment-method" data-method="wallet" aria-pressed="false">
+                  <span class="payment-method-title">Billetera digital</span>
+                  <span class="payment-method-subtitle">Nequi, Daviplata</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="fields-card">
+              <div class="form-group">
+                <label for="cardNumber">Número de tarjeta</label>
+                <div class="card-input-wrapper">
+                  <input type="text" id="cardNumber" placeholder="0000 0000 0000 0000"
+                    maxlength="19" inputmode="numeric" autocomplete="cc-number" required />
+                  <span class="card-icon" aria-hidden="true">💳</span>
+                </div>
+                <small style="color:var(--muted);font-size:.75rem;margin-top:.25rem;display:block">
+                  Prueba: <code>4111 1111 1111 1111</code> aprobada · <code>1111 0000 0000 0000</code> rechazada
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label for="cardName">Nombre en la tarjeta</label>
+                <input type="text" id="cardName" placeholder="Como aparece en la tarjeta"
+                  autocomplete="cc-name" required />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="expiry">Vencimiento</label>
+                  <input type="text" id="expiry" placeholder="MM/AA"
+                    maxlength="5" inputmode="numeric" autocomplete="cc-exp" required />
+                </div>
+                <div class="form-group">
+                  <label for="cvv">CVV</label>
+                  <input type="text" id="cvv" placeholder="000"
+                    maxlength="4" inputmode="numeric" autocomplete="cc-csc" required />
+                </div>
+              </div>
+            </div>
+
+            <div id="fields-pse" class="hidden">
+              <div class="form-group">
+                <label for="bank">Banco</label>
+                <select id="bank">
+                  <option value="">Selecciona tu banco</option>
+                  <option value="bancolombia">Bancolombia</option>
+                  <option value="davivienda">Davivienda</option>
+                  <option value="bbva">BBVA</option>
+                  <option value="bogota">Banco de Bogotá</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="document">Documento del titular</label>
+                <input type="text" id="document" placeholder="Cédula o NIT" inputmode="numeric" />
+              </div>
+            </div>
+
+            <div id="fields-wallet" class="hidden">
+              <div class="form-group">
+                <label for="walletProvider">Billetera digital</label>
+                <select id="walletProvider">
+                  <option value="">Selecciona una billetera</option>
+                  <option value="nequi">Nequi</option>
+                  <option value="daviplata">Daviplata</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="walletPhone">Celular asociado</label>
+                <input type="text" id="walletPhone" placeholder="3001234567" inputmode="numeric" />
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary btn-full" id="btn-pay" style="margin-top:.375rem">
+              Pagar {formatCOP(order.total)}
+            </button>
+          </form>
+        </div>
+
+        <!-- Recibo (oculto hasta el pago exitoso) -->
+        <div class="receipt hidden" id="receipt" role="region" aria-live="polite">
+          <div class="receipt-icon" aria-hidden="true">🧾</div>
+          <h3>¡Pago exitoso!</h3>
+          <p class="receipt-detail">Pedido <strong>{order.order_number}</strong></p>
+          <div class="receipt-amount">{formatCOP(order.total)}</div>
+          <p class="receipt-detail">ID de transacción:</p>
+          <p class="receipt-txn" id="receipt-txn"></p>
+          <p class="receipt-detail" id="receipt-date" style="margin-top:.5rem"></p>
+          <a href="/" class="btn-primary" style="margin-top:1.5rem;display:inline-flex">Volver al menú</a>
+        </div>
+      </div>
+
+      <!-- Resumen del pedido -->
+      <aside class="order-summary-card" aria-label="Resumen del pedido">
+        <h3>Resumen</h3>
+        <p style="font-size:.8rem;color:var(--muted);margin-bottom:.875rem">#{order.order_number}</p>
+        {order.items.map((item: OrderItem) => (
+          <div class="summary-item">
+            <span>{item.qty}× {item.name}</span>
+            <span>{formatCOP(item.price * item.qty)}</span>
+          </div>
+        ))}
+        <div class="summary-total">
+          <span>Total</span>
+          <span class="summary-total-amount">{formatCOP(order.total)}</span>
+        </div>
+      </aside>
+    </div>
+  )}
+</Layout>
+
+<script>
+  const form = document.getElementById('payment-form') as HTMLFormElement | null;
+  if (form) {
+    const alertEl = document.getElementById('payment-alert')!;
+    const cardNumberInput = document.getElementById('cardNumber') as HTMLInputElement;
+    const expiryInput = document.getElementById('expiry') as HTMLInputElement;
+    const cvvInput = document.getElementById('cvv') as HTMLInputElement;
+    const methodInput = document.getElementById('paymentMethod') as HTMLInputElement;
+    const methods = Array.from(document.querySelectorAll('.payment-method')) as HTMLButtonElement[];
+    const cardFields = document.getElementById('fields-card')!;
+    const pseFields = document.getElementById('fields-pse')!;
+    const walletFields = document.getElementById('fields-wallet')!;
+
+    // Formateo número de tarjeta
+    cardNumberInput.addEventListener('input', () => {
+      const digits = cardNumberInput.value.replace(/\D/g, '').slice(0, 16);
+      cardNumberInput.value = digits.replace(/(.{4})/g, '$1 ').trim();
+    });
+
+    // Formateo vencimiento
+    expiryInput.addEventListener('input', () => {
+      const d = expiryInput.value.replace(/\D/g, '').slice(0, 4);
+      expiryInput.value = d.length >= 3 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
+    });
+
+    // Solo dígitos en CVV
+    cvvInput.addEventListener('input', () => {
+      cvvInput.value = cvvInput.value.replace(/\D/g, '').slice(0, 4);
+    });
+
+    methods.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const method = btn.dataset.method!;
+        methodInput.value = method;
+
+        methods.forEach(item => {
+          const active = item === btn;
+          item.classList.toggle('active', active);
+          item.setAttribute('aria-pressed', String(active));
+        });
+
+        cardFields.classList.toggle('hidden', method !== 'card');
+        pseFields.classList.toggle('hidden', method !== 'pse');
+        walletFields.classList.toggle('hidden', method !== 'wallet');
+      });
+    });
+
+    function showAlert(msg: string, type: 'error' | 'success') {
+      alertEl.innerHTML = `<div class="alert alert-${type}" role="alert">${msg}</div>`;
+    }
+
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      alertEl.innerHTML = '';
+
+      const orderId = (document.getElementById('order-id-val') as HTMLInputElement).value;
+      const cardNumber = cardNumberInput.value;
+      const cardName = (document.getElementById('cardName') as HTMLInputElement).value.trim();
+      const expiry = expiryInput.value;
+      const cvv = cvvInput.value;
+      const paymentMethod = methodInput.value;
+      const bank = (document.getElementById('bank') as HTMLSelectElement).value;
+      const documentId = (document.getElementById('document') as HTMLInputElement).value.trim();
+      const walletProvider = (document.getElementById('walletProvider') as HTMLSelectElement).value;
+      const walletPhone = (document.getElementById('walletPhone') as HTMLInputElement).value.trim();
+
+      if (paymentMethod === 'card') {
+        if (cardNumber.replace(/\s/g, '').length < 16) {
+          showAlert('Ingresa un número de tarjeta válido (16 dígitos).', 'error'); return;
+        }
+        if (!cardName) {
+          showAlert('Ingresa el nombre del titular.', 'error'); return;
+        }
+        if (expiry.length < 5) {
+          showAlert('Ingresa la fecha de vencimiento (MM/AA).', 'error'); return;
+        }
+        if (cvv.length < 3) {
+          showAlert('Ingresa el CVV (3 o 4 dígitos).', 'error'); return;
+        }
+      }
+      if (paymentMethod === 'pse') {
+        if (!bank) {
+          showAlert('Selecciona un banco para continuar con PSE.', 'error'); return;
+        }
+        if (documentId.length < 5) {
+          showAlert('Ingresa un documento válido para PSE.', 'error'); return;
+        }
+      }
+      if (paymentMethod === 'wallet') {
+        if (!walletProvider) {
+          showAlert('Selecciona una billetera digital.', 'error'); return;
+        }
+        if (walletPhone.replace(/\D/g, '').length < 10) {
+          showAlert('Ingresa un celular válido (10 dígitos).', 'error'); return;
+        }
+      }
+
+      const btn = document.getElementById('btn-pay') as HTMLButtonElement;
+      btn.disabled = true;
+      btn.classList.add('btn-loading');
+
+      try {
+        const res = await fetch('/api/payments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: Number(orderId),
+            paymentMethod,
+            cardNumber,
+            cardName,
+            expiry,
+            cvv,
+            bank,
+            documentId,
+            walletProvider,
+            walletPhone
+          })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          showAlert(data.error ?? 'Pago rechazado. Verifica los datos e intenta de nuevo.', 'error');
+          return;
+        }
+
+        // Mostrar recibo
+        document.getElementById('payment-form-card')!.classList.add('hidden');
+        document.getElementById('receipt-txn')!.textContent = data.transactionId;
+        document.getElementById('receipt-date')!.textContent =
+          new Date(data.paidAt).toLocaleString('es-CO', {
+            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+        document.getElementById('receipt')!.classList.remove('hidden');
+      } catch {
+        showAlert('Error de conexión. Por favor intenta de nuevo.', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('btn-loading');
+      }
+    });
+  }
+</script>
